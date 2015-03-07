@@ -4,7 +4,7 @@ This script will talk to an ecobee3 thermostat, acting like a more responsive
 
 ## Background
 
-[ecobee][http://www.ecobee.com/]'s ecobee3 smart thermostat comes with several
+[ecobee](http://www.ecobee.com/)'s ecobee3 smart thermostat comes with several
 sensors that allow it to figure out whether you're home or not. This combines
 with a feature called Smart Home/Away which uses this information to not run
 the heat/cooling when you're unexpectedly away, and to run it when you're
