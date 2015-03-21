@@ -218,8 +218,6 @@ class EcobeeApplication( object ):
                     log( "Change climate from %s to %s" % ( runningClimateRef,
                             sensorClimate ) )
                     self.setHold( identifier, sensorClimate, 14 )
-            else:
-                log( "Leaving manual hold alone." )
 
     def setHold( self, thermostatId, climate, minutes ):
         # Assume the thermostat is in the same timezone as this script.
