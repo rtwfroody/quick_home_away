@@ -60,7 +60,7 @@ class EcobeeApplication( object ):
 
     def maybeRefreshAuthentication( self ):
         if "authentication_expiration" in self.config and \
-                datetime.now() - timedelta( 0, 60 ) < self.config[ "authentication_expiration" ]:
+                datetime.now() + timedelta( 0, 60 ) < self.config[ "authentication_expiration" ]:
             return
         log( "Refreshing authentication." )
         r = requests.post(
