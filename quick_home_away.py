@@ -166,6 +166,11 @@ class EcobeeApplication( object ):
         last time we polled."""
         summary = self.thermostatSummary()
         updated = []
+        if 'revisionList' not in summary:
+            log( "WARNING: Couldn't find revisionList in the following summary object:" )
+            pprint( summary )
+            return []
+
         for revision in summary[ 'revisionList' ]:
             parts = revision.split( ":" )
             identifier = parts[ 0 ]
