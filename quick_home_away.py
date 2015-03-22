@@ -131,13 +131,67 @@ class EcobeeApplication( object ):
                 {
                 "startDate": start.strftime( "%Y-%m-%d" ),
                 "endDate": end.strftime( "%Y-%m-%d" ),
-                #"columns": "",
                 "includeSensors": includeSensors,
                 "selection": {
                     "selectionType": "thermostats",
                     "selectionMatch": thermostatId }
                 } )
 
+    def poll( self ):
+        """Return a list of thermostat ids that have been updated since the
+        last time we polled."""
+        summary = self.thermostatSummary()
+        updated = []
+        if 'revisionList' not in summary:
+            log( "WARNING: Couldn't find revisionList in the following summary object:" )
+            pprint( summary )
+            return []
+
+        for revision in summary[ 'revisionList' ]:
+            parts = revision.split( ":" )
+            identifier = parts[ 0 ]
+            name = parts[ 1 ]
+            intervalRevision = parts[ 6 ]
+            if intervalRevision != self.lastSeen.get( identifier ):
+                updated.append( identifier )
+                self.lastSeen[ identifier ] = intervalRevision
+        return updated
+
+    def setHold( self, thermostatId, climate, minutes ):
+        # Assume the thermostat is in the same timezone as this script.
+        start = datetime.now()
+        end = datetime.now() + timedelta( 0, minutes * 60 )
+        self.post( "thermostat",
+                {
+                    "selection": {
+                        "selectionType": "thermostats",
+                        "selectionMatch": thermostatId
+                        },
+                    "functions": [
+                        {
+                            "type": "setHold",
+                            "params": {
+                                "holdClimateRef": climate,
+                                "startDate": start.strftime( "%Y-%m-%d" ),
+                                "startTime": start.strftime( "%H:%M:%S" ),
+                                "endDate": end.strftime( "%Y-%m-%d" ),
+                                "endTime": end.strftime( "%H:%M:%S" ),
+                                "holdType": "dateTime",
+                                #"coolHoldTemp": 780,  # Not used when setting holdClimateRef
+                                #"heatHoldTemp": 700,  # Not used when setting holdClimateRef
+                                }
+                            }
+                        ]
+                    }
+                )
+
+    def thermostatIdentifiers( self ):
+        identifiers = []
+        for row in self.thermostatSummary()[ 'revisionList' ]:
+            identifiers.append( row.split( ':' )[ 0 ] )
+        return identifiers
+
+class QuickHomeAway( EcobeeApplication ):
     def sensorReport( self, thermostatId ):
         result = self.runtimeReport( thermostatId, includeSensors=True )[
                 'sensorList' ][ 0 ]
@@ -160,26 +214,6 @@ class EcobeeApplication( object ):
             if rowData:
                 data.append( ( date, rowData ) )
         return data
-
-    def poll( self ):
-        """Return a list of thermostat ids that have been updated since the
-        last time we polled."""
-        summary = self.thermostatSummary()
-        updated = []
-        if 'revisionList' not in summary:
-            log( "WARNING: Couldn't find revisionList in the following summary object:" )
-            pprint( summary )
-            return []
-
-        for revision in summary[ 'revisionList' ]:
-            parts = revision.split( ":" )
-            identifier = parts[ 0 ]
-            name = parts[ 1 ]
-            intervalRevision = parts[ 6 ]
-            if intervalRevision != self.lastSeen.get( identifier ):
-                updated.append( identifier )
-                self.lastSeen[ identifier ] = intervalRevision
-        return updated
 
     def aggressiveAway( self ):
         updated = self.poll()
@@ -219,40 +253,6 @@ class EcobeeApplication( object ):
                             sensorClimate ) )
                     self.setHold( identifier, sensorClimate, 14 )
 
-    def setHold( self, thermostatId, climate, minutes ):
-        # Assume the thermostat is in the same timezone as this script.
-        start = datetime.now()
-        end = datetime.now() + timedelta( 0, minutes * 60 )
-        self.post( "thermostat",
-                {
-                    "selection": {
-                        "selectionType": "thermostats",
-                        "selectionMatch": thermostatId
-                        },
-                    "functions": [
-                        {
-                            "type": "setHold",
-                            "params": {
-                                "holdClimateRef": climate,
-                                "startDate": start.strftime( "%Y-%m-%d" ),
-                                "startTime": start.strftime( "%H:%M:%S" ),
-                                "endDate": end.strftime( "%Y-%m-%d" ),
-                                "endTime": end.strftime( "%H:%M:%S" ),
-                                "holdType": "dateTime",
-                                #"coolHoldTemp": 780,  # Not used when setting holdClimateRef
-                                #"heatHoldTemp": 700,  # Not used when setting holdClimateRef
-                                }
-                            }
-                        ]
-                    }
-                )
-
-    def thermostatIdentifiers( self ):
-        identifiers = []
-        for row in self.thermostatSummary()[ 'revisionList' ]:
-            identifiers.append( row.split( ':' )[ 0 ] )
-        return identifiers
-
     def sensors( self, thermostatId, sensorType ):
         result = self.get( "thermostat", {
             "selection": {
@@ -269,35 +269,35 @@ class EcobeeApplication( object ):
                         sensors.append( sensor )
         return sensors
 
-def main():
-    parser = ArgumentParser()
-    parser.add_argument( "--install", action="store_true",
-            help="Authorize this application to access your thermostat. "
-            "Use this the first time you run the application." )
-    parser.add_argument( "minutes", nargs='?', type=int,
-            help="Run this many MINUTES and then exit. If this argument "
-            "is omitted, run forever." )
-    args = parser.parse_args()
+    def main( self ):
+        parser = ArgumentParser()
+        parser.add_argument( "--install", action="store_true",
+                help="Authorize this application to access your thermostat. "
+                "Use this the first time you run the application." )
+        parser.add_argument( "minutes", nargs='?', type=int,
+                help="Run this many MINUTES and then exit. If this argument "
+                "is omitted, run forever." )
+        args = parser.parse_args()
 
-    app = EcobeeApplication()
+        if args.install:
+            self.install()
+            return
 
-    if args.install:
-        app.install()
-        return
+        if not args.minutes is None:
+            endTime = datetime.now() + timedelta( 0, args.minutes * 60 )
+            log( "Run until %s." % endTime )
 
-    if not args.minutes is None:
-        endTime = datetime.now() + timedelta( 0, args.minutes * 60 )
-        log( "Run until %s." % endTime )
+        while True:
+            nowTime = datetime.now().time()
+            try:
+                self.aggressiveAway()
+            except Exception:
+                import traceback
+                traceback.print_exc()
+            if not args.minutes is None and datetime.now() > endTime:
+                break
+            sleep( 60 - datetime.now().second )
 
-    while True:
-        nowTime = datetime.now().time()
-        try:
-            app.aggressiveAway()
-        except Exception:
-            import traceback
-            traceback.print_exc()
-        if not args.minutes is None and datetime.now() > endTime:
-            break
-        sleep( 60 - datetime.now().second )
-
-sys.exit( main() )
+if __name__ == '__main__':
+    app = QuickHomeAway()
+    sys.exit( app.main() )
