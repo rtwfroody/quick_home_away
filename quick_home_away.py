@@ -62,6 +62,10 @@ class EcobeeApplication( object ):
         if "authentication_expiration" in self.config and \
                 datetime.now() + timedelta( 0, 60 ) < self.config[ "authentication_expiration" ]:
             return
+        if 'refresh_token' not in self.config:
+            print "We don't have a refresh_token!"
+            print "Run '%s --install' to get one." % sys.argv[ 0 ]
+            sys.exit( 1 )
         log( "Refreshing authentication." )
         r = requests.post(
                 "https://api.ecobee.com/token?grant_type=refresh_token&code=%s&client_id=%s"
