@@ -15,6 +15,13 @@ scope = "smartWrite"
 def log( *args ):
     print datetime.now().strftime( "%Y-%m-%d %H:%M" ), " ".join( map( str, args ) )
 
+# Hack to be compatible with wildly different versions of the requests module.
+def maybeCall( var ):
+    if callable( var ):
+        return var()
+    else:
+        return var
+
 class EcobeeApplication( object ):
     def __init__( self ):
         self.config = shelve.open( "ecobee.shelf" )
@@ -25,7 +32,7 @@ class EcobeeApplication( object ):
 
     def updateAuthentication( self, response ):
         assert response.ok
-        result = response.json()
+        result = maybeCall( response.json )
 
         self.config[ "access_token" ] = result[ "access_token" ]
         self.config[ "token_type" ] = result[ "token_type" ]
@@ -38,7 +45,7 @@ class EcobeeApplication( object ):
                 "https://api.ecobee.com/authorize?response_type=ecobeePin&client_id=%s&scope=%s"
                 % ( appKey, scope ) )
         assert r.ok
-        result = r.json()
+        result = maybeCall( r.json )
         authorizationToken = result[ 'code' ]
         print "Please log onto the ecobee web portal, log in, select the menu "
         print "item in the top right (3 lines), and select MY APPS."
@@ -83,7 +90,7 @@ class EcobeeApplication( object ):
                         self.config[ "access_token" ] ) }
                 )
         try:
-            return r.json()
+            return maybeCall( r.json )
         except ValueError:
             log( "Couldn't decode:" )
             log( r.text )
@@ -102,7 +109,7 @@ class EcobeeApplication( object ):
         if not r.ok:
             log( r.text )
         assert r.ok
-        return r.json()
+        return maybeCall( r.json )
 
     def thermostatSummary( self ):
         return self.get( "thermostatSummary", {
