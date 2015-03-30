@@ -168,10 +168,9 @@ class EcobeeApplication( object ):
                 self.lastSeen[ identifier ] = intervalRevision
         return updated
 
-    def setHold( self, thermostatId, climate, minutes ):
-        # Assume the thermostat is in the same timezone as this script.
-        start = datetime.now()
-        end = datetime.now() + timedelta( 0, minutes * 60 )
+    def setHold( self, thermostatId, thermostatTime, climate, minutes ):
+        end = thermostatTime + timedelta( 0, minutes * 60 )
+        log( "setHold %s from %s until %s" % ( climate, thermostatTime, end ) )
         self.post( "thermostat",
                 {
                     "selection": {
@@ -183,8 +182,8 @@ class EcobeeApplication( object ):
                             "type": "setHold",
                             "params": {
                                 "holdClimateRef": climate,
-                                "startDate": start.strftime( "%Y-%m-%d" ),
-                                "startTime": start.strftime( "%H:%M:%S" ),
+                                "startDate": thermostatTime.strftime( "%Y-%m-%d" ),
+                                "startTime": thermostatTime.strftime( "%H:%M:%S" ),
                                 "endDate": end.strftime( "%Y-%m-%d" ),
                                 "endTime": end.strftime( "%H:%M:%S" ),
                                 "holdType": "dateTime",
@@ -262,7 +261,10 @@ class QuickHomeAway( EcobeeApplication ):
                 if runningClimateRef != sensorClimate:
                     log( "Change climate from %s to %s" % ( runningClimateRef,
                             sensorClimate ) )
-                    self.setHold( identifier, sensorClimate, 14 )
+                    thermostatTime = datetime.strptime(
+                          thermostat[ identifier ][ 'thermostatTime' ],
+                          "%Y-%m-%d %H:%M:%S" )
+                    self.setHold( identifier, thermostatTime, sensorClimate, 14 )
 
     def sensors( self, thermostatId, sensorType ):
         result = self.get( "thermostat", {
