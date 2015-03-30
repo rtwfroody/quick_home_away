@@ -44,3 +44,31 @@ Now run quick_home_away.py with no arguments to put it in action.
 
 I developed this script under Linux, but it should work anywhere that Python
 2.7 is available.
+
+## Security
+
+I got the following e-mail from developer@ecobee.com:
+> We are really happy to see your use of the ecobee API to create your Quick
+> Home/Away App, and it is great that you are sharing this knowledge publicly.
+> One issue we noticed is that the code you posed on GitHub
+> (https://github.com/rtwfroody/quick_home_away/blob/master/quick_home_away.py)
+> exposes your own Application Key. This is supposed to be a closely guarded
+> secret, as anyone else can now use this key and pose themselves as your app.
+> It is best if you revoke the current app and regenerate a new key.
+
+https://www.ecobee.com/home/developer/api/documentation/v1/auth/auth-intro.shtml
+also contains this warning:
+> You are ultimately responsible for your application key. It should never,
+> under any circumstances be shared or given away. Should ecobee detect that an
+> application key has been compromised, it will be revoked. Once this occurs
+> all deployments of your application will stop working.
+
+I am unsure how somebody else can use the app key to gain access to a
+thermostat, and I'm also not sure how to release open source software while
+keeping the app key secret. I replied to the e-mail asking about that but
+have gotten no reply.
+
+In the meantime, if you want to be paranoid, you can generate your own app key
+by registering as a developer at https://www.ecobee.com/developers/ and then
+Create New from the DEVELOPER menu in the Ecobee web interface for your
+thermostat. Once that's done just change the appKey near the top of the script.
